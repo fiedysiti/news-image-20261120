@@ -21,6 +21,16 @@ EXPECTED_SHA256 = "555aec24a2816ed8b62dc6e8c9ed73bc64d73b1baf42550cb558e0d00d9f9
 CHUNK = 1024 * 1024
 
 
+# The eight bytes every PNG file starts with, per the PNG spec.
+PNG_SIGNATURE = b"\x89PNG\r\n\x1a\n"
+
+
+def looks_like_png(path: Path) -> bool:
+    """True when the file at ``path`` opens with the PNG signature."""
+    with path.open("rb") as fh:
+        return fh.read(len(PNG_SIGNATURE)) == PNG_SIGNATURE
+
+
 def sha256_of(path: Path) -> str:
     digest = hashlib.sha256()
     with path.open("rb") as fh:
@@ -49,6 +59,10 @@ def main() -> int:
     dest_dir.mkdir(parents=True, exist_ok=True)
     dest = dest_dir / IMAGE_NAME
     shutil.copyfile(source, dest)
+    if not looks_like_png(dest):
+        print(f"not a PNG file: {dest} lacks the PNG signature",
+              file=sys.stderr)
+        return 1
     got = sha256_of(dest)
     if got != EXPECTED_SHA256:
         print(f"sha256 mismatch: got {got}, want {EXPECTED_SHA256}",
